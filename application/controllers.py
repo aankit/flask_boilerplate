@@ -1,14 +1,39 @@
-from flask import request, Response, session, escape, redirect
+from flask import request, Response, session, escape, redirect, flash
 from flask import render_template, send_from_directory, url_for
 from application import app
 from application import scheduler
 from application import schedules
+from application.forms import SignupForm
+
+# routing for API endpoints (generated from the models designated as API_MODELS)
+from application.core import api_manager
+from application.models import *
+
+for model_name in app.config['API_MODELS']:
+    model_class = app.config['API_MODELS'][model_name]
+    api_manager.create_api(model_class, methods=['GET', 'POST'])
+
+api_session = api_manager.session
 
 @app.route('/')
 def index():
     if 'username' in session:
         return 'Logged in as %s' % escape(session['username'])
-    return 'You are not logged in'
+    else:
+        return 'You are not logged in'
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    form = SignupForm()
+
+    if request.method == 'POST':
+        if form.validate() == False:
+            return render_template('signup.html', form=form)
+        else:
+            return "[1] Create a new user [2] sign in the user [3] redirect to the user's profile"
+    elif request.method == 'GET':
+        return render_template('signup.html', form=form)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

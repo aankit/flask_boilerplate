@@ -1,9 +1,8 @@
 from application import scheduler
-scheduler.start()
-print 'scheduler started'
 
 # @scheduler.scheduled_job('interval', 
-# 	seconds=3, 
+# 	seconds=3,
+# 	id = "scheduled_job",
 # 	replace_existing=True)
 # def timed_job():
 # 	print "decorator job working."
