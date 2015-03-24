@@ -22,6 +22,13 @@ def index():
     else:
         return 'You are not logged in'
 
+@app.route('/log', methods=['GET', 'POST'])
+def log():
+    if request.method == 'POST':
+        return request.get_data()
+    elif request.method == 'GET':
+        return 'hi there'
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     form = SignupForm()
@@ -30,12 +37,18 @@ def signup():
         if form.validate() == False:
             return render_template('signup.html', form=form)
         else:
-            return "[1] Create a new user [2] sign in the user [3] redirect to the user's profile"
+            newuser = User(form.firstname.data, form.lastname.data, form.email.data, form.password.data)
+            db.session.add(newuser)
+            db.session.commit()
+
+            session['email'] = newuser.email
+            return redirect(url_for('schedule'))
+
     elif request.method == 'GET':
         return render_template('signup.html', form=form)
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/signin', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         session['username'] = request.form['username']
@@ -47,12 +60,21 @@ def login():
         </form>
     '''
 
-@app.route('/logout')
+@app.route('/signout')
 def logout():
     # remove the username from the session if it's there
     session.pop('username', None)
     return redirect(url_for('index'))
 
+@app.route('/schedule')
+def schedule():
+    if 'email' not in session:
+        return redirect(url_for('signin'))
+    user = User.query.filter_by(email = session['email']).first()
+    if user is None:
+        return redirect(url_for('signin'))
+    else:
+        return render_template('profile.html')
 
 @app.route('/add/<int:TIME>/<JOB_ID>')
 def add(TIME, JOB_ID):
