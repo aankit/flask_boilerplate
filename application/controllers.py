@@ -3,7 +3,7 @@ from flask import render_template, send_from_directory, url_for
 from application import app
 from application import scheduler
 from application import schedules
-from application.forms import SignupForm
+from application.forms import SignupForm, SigninForm
 
 # routing for API endpoints (generated from the models designated as API_MODELS)
 from application.core import api_manager
@@ -16,11 +16,14 @@ for model_name in app.config['API_MODELS']:
 api_session = api_manager.session
 
 @app.route('/')
-def index():
-    if 'username' in session:
-        return 'Logged in as %s' % escape(session['username'])
+def home():
+    if 'email' not in session:
+        return redirect(url_for('signin'))
+    user = User.query.filter_by(email = session['email']).first()
+    if user is None:
+        return redirect(url_for('signup'))
     else:
-        return 'You are not logged in'
+        return render_template('home.html')
 
 @app.route('/log', methods=['GET', 'POST'])
 def log():
@@ -32,7 +35,8 @@ def log():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     form = SignupForm()
-
+    if 'email' in session:
+        return redirect(url_for('home')) 
     if request.method == 'POST':
         if form.validate() == False:
             return render_template('signup.html', form=form)
@@ -49,22 +53,29 @@ def signup():
 
 
 @app.route('/signin', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        session['username'] = request.form['username']
-        return redirect(url_for('index'))
-    return '''
-        <form action="" method="post">
-            <p><input type=text name=username>
-            <p><input type=submit value=Login>
-        </form>
-    '''
+def signin():
+  form = SigninForm()
+  if 'email' in session:
+    return redirect(url_for('home')) 
+
+  if request.method == 'POST':
+    if form.validate() == False:
+      return render_template('signin.html', form=form)
+    else:
+      session['email'] = form.email.data
+      return redirect(url_for('home'))
+                 
+  elif request.method == 'GET':
+    return render_template('signin.html', form=form)
 
 @app.route('/signout')
-def logout():
-    # remove the username from the session if it's there
-    session.pop('username', None)
-    return redirect(url_for('index'))
+def signout():
+ 
+  if 'email' not in session:
+    return redirect(url_for('signin'))
+     
+  session.pop('email', None)
+  return redirect(url_for('home'))
 
 @app.route('/schedule')
 def schedule():
@@ -72,9 +83,9 @@ def schedule():
         return redirect(url_for('signin'))
     user = User.query.filter_by(email = session['email']).first()
     if user is None:
-        return redirect(url_for('signin'))
+        return redirect(url_for('signup'))
     else:
-        return render_template('profile.html')
+        return render_template('schedule.html')
 
 @app.route('/add/<int:TIME>/<JOB_ID>')
 def add(TIME, JOB_ID):
